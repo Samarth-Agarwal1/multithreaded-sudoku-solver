@@ -7,11 +7,18 @@
 int get_cell_num();
 int solve(int, int **);
 int *get_allowed_vals(int, int, int **, int *);
+bool is_board_solved(int **);
+bool is_sub_square_solved(int **, int, int);
 
-#define BOARD_LENGTH 4
+#define BOARD_LENGTH 9
 
 int main() {
+    struct timespec time;
+    clock_gettime(CLOCK_REALTIME, &time);
+    srand(time.tv_nsec);
+
     int **board = (int **)(malloc(BOARD_LENGTH * sizeof(int *)));
+
     int i;
     int j;
     for (i = 0; i < BOARD_LENGTH; i++) {
@@ -37,12 +44,13 @@ int main() {
 }
 
 int get_cell_num() {
-    struct timespec time;
-    clock_gettime(CLOCK_REALTIME, &time);
-    srand(time.tv_nsec);
-    int non_zero_num_chance = rand() % 11;
+    int non_zero_num_chance = rand() % 4;
     if (non_zero_num_chance == 0) {
-        return rand() % BOARD_LENGTH;
+        int cell_num = 0;
+        while (cell_num == 0) {
+            cell_num = rand() % (BOARD_LENGTH + 1);
+        }
+        return cell_num;
     }
     return 0;
 }
@@ -51,7 +59,12 @@ int solve(int pos, int **board) {
     int x = pos % BOARD_LENGTH;
     int y = pos / BOARD_LENGTH;
     if (pos >= (BOARD_LENGTH * BOARD_LENGTH)) {
-        return 0;
+        if (is_board_solved(board))
+        {
+            return 0;
+        }
+        
+        return -1;
     }
     else if (board[y][x] == 0)
     {
@@ -107,4 +120,73 @@ int *get_allowed_vals(int x, int y, int **board, int *num_allowed_vals) {
     }
 
     return allowed_vals;
+}
+
+bool is_board_solved(int **board) {
+    int i;
+    for (i = 0; i < BOARD_LENGTH; i++)
+    {
+        int j;
+        for (j = 0; j < BOARD_LENGTH; j++)
+        {
+            if (board[i][j] == 0) {
+                return false;
+            }
+
+            int k;
+            for (k = 0; k < BOARD_LENGTH; k++)
+            {
+                if (j != k && board[i][j] == board[i][k])
+                {
+                    return false;
+                }
+                if (j != k && board[j][i] == board[k][i]) {
+                    return false;
+                }
+            }
+        }
+    }
+
+    int sub_square_length = (int) sqrt(BOARD_LENGTH);
+    for (i = 0; i < sub_square_length; i++)
+    {
+        int j;
+        for (j = 0; j < sub_square_length; j++)
+        {
+            int sub_square_x = j * sub_square_length;
+            int sub_square_y = i * sub_square_length;
+            if (!is_sub_square_solved(board, sub_square_x, sub_square_y)) {
+                return false;
+            }
+        }
+    }
+    
+    return true;
+}
+
+bool is_sub_square_solved(int **board, int x_start, int y_start) {
+    int sub_square_length = (int) sqrt(BOARD_LENGTH);
+    int row;
+    for (row = y_start; row < (y_start + sub_square_length); row++)
+    {
+        int col;
+        for (col = x_start; col < (x_start + sub_square_length); col++)
+        {
+            int i;
+            for (i = y_start; i < (y_start + sub_square_length); i++) {
+                int j;
+                for (j = x_start; j < (x_start + sub_square_length); j++)
+                {
+                    if ((i != row || j != col) && board[i][j] == board[row][col]) {
+                        return false;
+                    }
+                    if (board[i][j] == 0) {
+                        return false;
+                    }
+                }
+            }
+        }
+    }
+
+    return true;
 }
