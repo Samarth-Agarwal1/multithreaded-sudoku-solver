@@ -4,7 +4,9 @@
 #include <math.h>
 #include <time.h>
 
-int get_cell_num();
+int **init_board();
+int get_cell_num(int **, int, int);
+void print_board(int **);
 int solve(int, int **);
 int *get_allowed_vals(int, int, int **, int *);
 bool is_board_solved(int **);
@@ -17,42 +19,75 @@ int main() {
     clock_gettime(CLOCK_REALTIME, &time);
     srand(time.tv_nsec);
 
-    int **board = (int **)(malloc(BOARD_LENGTH * sizeof(int *)));
+    int **board = init_board();
 
     int i;
-    int j;
     for (i = 0; i < BOARD_LENGTH; i++) {
-        board[i] = (int *)(malloc(BOARD_LENGTH * sizeof(int)));
+        int j;
         for (j = 0; j < BOARD_LENGTH; j++)
         {
-            board[i][j] = get_cell_num();
+            board[i][j] = get_cell_num(board, j, i);
         }
     }
 
-    for (i = 0; i < BOARD_LENGTH; i++)
-    {
-        for (j = 0; j < BOARD_LENGTH; j++)
-        {
-            printf("%2d ", board[i][j]);
-        }
-        printf("\n");     
-    }
+    print_board(board);
+    printf("\n");
 
     solve(0, board);
+
+    print_board(board);
+
+    for (i = 0; i < BOARD_LENGTH; i++) {
+        free(board[i]);
+    }
+    free(board);
     
     return 0;
 }
 
-int get_cell_num() {
+int **init_board() {
+    int **board = (int **)(malloc(BOARD_LENGTH * sizeof(int *)));
+
+    int i;
+    for (i = 0; i < BOARD_LENGTH; i++)
+    {
+        board[i] = (int *)(malloc(BOARD_LENGTH * sizeof(int)));
+        int j;
+        for (j = 0; j < BOARD_LENGTH; j++)
+        {
+            board[i][j] = 0;
+        }
+    }
+    
+    return board;
+}
+
+int get_cell_num(int **board, int x, int y) {
+    int cell_num = 0;
     int non_zero_num_chance = rand() % 4;
     if (non_zero_num_chance == 0) {
-        int cell_num = 0;
-        while (cell_num == 0) {
-            cell_num = rand() % (BOARD_LENGTH + 1);
+        int num_allowed_vals;
+        int *allowed_vals = get_allowed_vals(x, y, board, &num_allowed_vals);
+        if (num_allowed_vals > 0) {
+            cell_num = allowed_vals[rand() % num_allowed_vals];
         }
-        return cell_num;
+        free(allowed_vals);
     }
-    return 0;
+    return cell_num;
+}
+
+void print_board(int **board)
+{
+    int i;
+    for (i = 0; i < BOARD_LENGTH; i++)
+    {
+        int j;
+        for (j = 0; j < BOARD_LENGTH; j++)
+        {
+            printf("%2d ", board[i][j]);
+        }
+        printf("\n");
+    }
 }
 
 int solve(int pos, int **board) {
@@ -64,7 +99,7 @@ int solve(int pos, int **board) {
             return 0;
         }
         
-        return -1;
+        return 1;
     }
     else if (board[y][x] == 0)
     {
@@ -72,9 +107,34 @@ int solve(int pos, int **board) {
         int *allowed_vals = get_allowed_vals(x, y, board, &num_allowed_vals);
 
         if (num_allowed_vals == 0) {
-            return -1;
+            free(allowed_vals);
+            return 1;
         }
-        return 0;
+        else
+        {
+            bool solved = false;
+            int i = 0;
+            while (!solved && i < num_allowed_vals)
+            {
+                board[y][x] = allowed_vals[i];
+                int r = solve(pos + 1, board);
+                if (r == 0) {
+                    solved = true;
+                }
+                i += 1;
+            }
+
+            free(allowed_vals);
+
+            if (solved) {
+                return 0;
+            }
+            else
+            {
+                board[y][x] = 0;
+                return 1;
+            }
+        }
     }
     else
     {
